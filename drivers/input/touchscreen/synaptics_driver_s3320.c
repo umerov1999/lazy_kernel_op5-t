@@ -4664,6 +4664,10 @@ static int synaptics_ts_probe(struct i2c_client *client,
 		goto err_alloc_data_failed;
 	}
 
+
+	pm_qos_add_request(&ts->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
+		PM_QOS_DEFAULT_VALUE);
+
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
 	ts->dev = &client->dev;
@@ -4882,9 +4886,6 @@ static int synaptics_ts_probe(struct i2c_client *client,
 	}
 #endif
 	init_synaptics_proc();
-
-	pm_qos_add_request(&ts->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
-		PM_QOS_DEFAULT_VALUE);
 
 	TPDTM_DMESG("synaptics_ts_probe 3203: normal end\n");
 	return 0;
