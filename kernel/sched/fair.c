@@ -130,8 +130,6 @@ unsigned int __read_mostly sysctl_sched_shares_window = 10000000UL;
 unsigned int sysctl_sched_cfs_bandwidth_slice = 5000UL;
 #endif
 
-unsigned int __read_mostly sysctl_sched_cpu_schedtune_bias = 1;
-
 /*
  * The margin used when comparing utilization with CPU capacity:
  * util * margin < capacity * 1024
@@ -7077,6 +7075,12 @@ cpu_util_freq(int cpu)
 }
 #endif
 
+/*
+ * Overrides bias when task is boosted. This is considered when it comes to 
+ * deciding whether to use high cpu orig_cap or not.
+ */
+unsigned int sysctl_sched_cpu_schedtune_bias;
+
 static int start_cpu(bool boosted)
 {
 	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
@@ -7532,10 +7536,10 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu,
 	boosted = task_is_boosted(p);
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 	prefer_idle = schedtune_prefer_idle(p) > 0;
-  crucial = schedtune_crucial(p) > 0;
+	crucial = schedtune_crucial(p) > 0;
 #else
 	prefer_idle = 0;
-  crucial = 0;
+	crucial = 0;
 #endif
 
 	sync_entity_load_avg(&p->se);
@@ -7543,7 +7547,7 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu,
 	sd = rcu_dereference(per_cpu(sd_ea, prev_cpu));
 	/* Find a cpu with sufficient capacity */
 	tmp_target = find_best_target(p, &tmp_backup,
-    boosted || sync_boost, prefer_idle, crucial);
+		boosted || sync_boost, prefer_idle, crucial);
 
 	if (!sd)
 		goto unlock;
