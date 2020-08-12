@@ -67,7 +67,6 @@ static struct boost_val input, kick;
 
 /* Framebuffer state notifier */
 static struct notifier_block fb_notifier;
-static bool fb_state;
 
 static void set_boost(struct boost_val *boost, bool enable)
 {
@@ -94,12 +93,6 @@ static void set_boost(struct boost_val *boost, bool enable)
 		sysctl_sched_cpu_schedtune_bias = enable;
 		do_crucial("top-app", enable);
 	}
-}
-
-static void disable_boost(struct boost_val *boost)
-{
-	if (boost->curr_state)
-		mod_delayed_work(boost->boost_wq, &boost->disable, 0);
 }
 
 static void trigger_boost(struct boost_val *boost, unsigned int *sched_boost,
@@ -157,9 +150,10 @@ static void kick_remove(struct work_struct *work)
 
 static void trigger_event(struct boost_val *boost, bool state)
 {
-	/* Disable boost if state or screen is off */
-	if (!state || !fb_state) {
-		disable_boost(boost);
+	/* Disable boost if state is off */
+	if (!state) {
+		if (boost->curr_state)
+			mod_delayed_work(boost->boost_wq, &boost->disable, 0);
 		return;
 	}
 
@@ -240,19 +234,11 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 			  void *data)
 {
 	int *blank = ((struct fb_event *) data)->data;
-	bool new_state = *blank == FB_BLANK_UNBLANK;
 
 	if (action != FB_EARLY_EVENT_BLANK)
 		return NOTIFY_OK;
 
-	if (new_state != fb_state) {
-		fb_state = new_state;
-		disable_schedtune_boost(!fb_state);
-		if (!fb_state) {
-			disable_boost(&input);
-			disable_boost(&kick);
-		}
-	}
+	disable_schedtune_boost(*blank != FB_BLANK_UNBLANK);
 
 	return NOTIFY_OK;
 }
