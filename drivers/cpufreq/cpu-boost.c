@@ -14,8 +14,6 @@
  * GNU General Public License for more details.
  */
 
-#define pr_fmt(fmt) "cpu-boost: " fmt
-
 #include <linux/fb.h>
 #include <linux/input.h>
 #include <linux/moduleparam.h>
@@ -134,7 +132,7 @@ static void trigger_boost(struct boost_val *boost, unsigned int *sched_boost,
 		}
 	}
 
-	set_boost(boost, 1);
+	set_boost(boost, true);
 }
 
 static void trigger_input(struct work_struct *work)
@@ -149,12 +147,12 @@ static void trigger_kick(struct work_struct *work)
 
 static void input_remove(struct work_struct *work)
 {
-	set_boost(&input, 0);
+	set_boost(&input, false);
 }
 
 static void kick_remove(struct work_struct *work)
 {
-	set_boost(&kick, 0);
+	set_boost(&kick, false);
 }
 
 static void trigger_event(struct boost_val *boost, bool state)
@@ -164,10 +162,6 @@ static void trigger_event(struct boost_val *boost, bool state)
 		disable_boost(boost);
 		return;
 	}
-
-	/* Do not allow boosts if kick.curr_state is on */
-	if (kick.curr_state)
-		return;
 
 	if (!work_pending(&boost->enable))
 		queue_work(boost->boost_wq, &boost->enable);
@@ -231,20 +225,7 @@ static const struct input_device_id cpuboost_ids[] = {
 			BIT_MASK(ABS_MT_POSITION_X) |
 			BIT_MASK(ABS_MT_POSITION_Y) },
 	},
-	/* touchpad */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
-			INPUT_DEVICE_ID_MATCH_ABSBIT,
-		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
-		.absbit = { [BIT_WORD(ABS_X)] =
-			BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
-	},
-	/* Keypad */
-	{
-		.flags = INPUT_DEVICE_ID_MATCH_EVBIT,
-		.evbit = { BIT_MASK(EV_KEY) },
-	},
-	{ },
+	{ }
 };
 
 static struct input_handler cpuboost_input_handler = {
@@ -259,7 +240,7 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 			  void *data)
 {
 	int *blank = ((struct fb_event *) data)->data;
-	bool new_state = (*blank == FB_BLANK_UNBLANK) ? 1 : 0;
+	bool new_state = *blank == FB_BLANK_UNBLANK;
 
 	if (action != FB_EARLY_EVENT_BLANK)
 		return NOTIFY_OK;
