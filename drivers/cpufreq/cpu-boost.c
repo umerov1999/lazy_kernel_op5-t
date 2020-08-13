@@ -16,7 +16,6 @@
 
 #include <linux/fb.h>
 #include <linux/input.h>
-#include <linux/moduleparam.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/time.h>
