@@ -80,6 +80,7 @@
 #include <linux/sysctl.h>
 #include <linux/kcov.h>
 #include <linux/cpufreq_times.h>
+#include <linux/cpu-boost.h>
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <asm/uaccess.h>
@@ -1800,6 +1801,10 @@ long _do_fork(unsigned long clone_flags,
 	struct task_struct *p;
 	int trace = 0;
 	long nr;
+
+	/* Apply cpuboost_kick each time userspace launches an app */
+	if (task_is_zygote(current))
+		cpuboost_kick();
 
 	/*
 	 * Determine whether and which event to report to ptracer.  When
