@@ -244,30 +244,38 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 
 static void destroy_boost_workqueues(void)
 {
-	destroy_workqueue(input.boost_wq);
-	destroy_workqueue(kick.boost_wq);
+	if (input.boost_wq)
+		destroy_workqueue(input.boost_wq);
+	if (kick.boost_wq)
+		destroy_workqueue(kick.boost_wq);
 }
 
-static void __exit cpu_boost_exit(void)
+static int init_boost_workqueues(void)
 {
-	input_unregister_handler(&cpuboost_input_handler);
-	fb_unregister_client(&fb_notifier);
-	destroy_boost_workqueues();
+	input.boost_wq = alloc_ordered_workqueue("input_boost_wq", WQ_FREEZABLE);
+	if (!input.boost_wq)
+		return -ENOMEM;
+
+	INIT_WORK(&input.enable, trigger_input);	
+	INIT_DELAYED_WORK(&input.disable, input_remove);
+
+	kick.boost_wq = alloc_ordered_workqueue("kick_boost_wq", WQ_FREEZABLE);
+	if (!kick.boost_wq)
+		return -ENOMEM;
+
+	INIT_WORK(&kick.enable, trigger_kick);
+	INIT_DELAYED_WORK(&kick.disable, kick_remove);
+
+	return 0;
 }
 
 static int __init cpu_boost_init(void)
 {
 	int ret;
 
-	input.boost_wq = alloc_ordered_workqueue("input_boost_wq", WQ_FREEZABLE);
-	kick.boost_wq = alloc_ordered_workqueue("kick_boost_wq", WQ_FREEZABLE);
-	if (!input.boost_wq || !kick.boost_wq)
-		return -ENOMEM;
-
-	INIT_WORK(&input.enable, trigger_input);
-	INIT_WORK(&kick.enable, trigger_kick);
-	INIT_DELAYED_WORK(&input.disable, input_remove);
-	INIT_DELAYED_WORK(&kick.disable, kick_remove);
+	ret = init_boost_workqueues();
+	if (ret)
+		goto err_wq;
 
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
@@ -288,4 +296,3 @@ err_wq:
 	return ret;
 }
 late_initcall(cpu_boost_init);
-module_exit(cpu_boost_exit);
