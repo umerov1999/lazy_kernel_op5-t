@@ -26,12 +26,10 @@
 /*
  * Modifiable Variables
  */
-static bool __read_mostly dsboost_input_state =
-	CONFIG_INPUT_BOOST;
+static bool __read_mostly dsboost_input_state = true;
 module_param(dsboost_input_state, bool, 0644);
 
-static bool __read_mostly dsboost_kick_state =
-	CONFIG_KICK_BOOST;
+static bool __read_mostly dsboost_kick_state = true;
 module_param(dsboost_kick_state, bool, 0644);
 
 static unsigned int __read_mostly input_sched_boost =
