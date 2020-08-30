@@ -62,8 +62,9 @@ struct boost_val {
 /* Boost value structures */
 static struct boost_val input, kick;
 
-/* Framebuffer state notifier */
+/* Framebuffer state notifier and stored blank boolean */
 static struct notifier_block fb_notifier;
+static bool stored_blank;
 
 static void set_boost(struct boost_val *boost, bool enable)
 {
@@ -147,8 +148,8 @@ static void kick_remove(struct work_struct *work)
 
 static void trigger_event(struct boost_val *boost, bool state)
 {
-	/* Disable boost if state is off */
-	if (!state) {
+	/* Disable boost if state or stored_blank is false */
+	if (!state || !stored_blank) {
 		if (boost->curr_state)
 			mod_delayed_work(boost->boost_wq, &boost->disable, 0);
 		return;
@@ -231,11 +232,17 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 			  void *data)
 {
 	int *blank = ((struct fb_event *) data)->data;
+	bool suspend_state = *blank != FB_BLANK_UNBLANK;
 
-	if (action != FB_EARLY_EVENT_BLANK)
+	if (action != FB_EARLY_EVENT_BLANK || suspend_state != stored_blank)
 		return NOTIFY_OK;
 
-	disable_schedtune_boost(*blank != FB_BLANK_UNBLANK);
+	stored_blank = !suspend_state;
+	disable_schedtune_boost(suspend_state);
+
+	/* Trigger boosts whenever blank state changes */
+	trigger_event(&input, dsboost_input_state);
+	trigger_event(&kick, dsboost_kick_state);
 
 	return NOTIFY_OK;
 }
@@ -250,14 +257,14 @@ static void destroy_boost_workqueues(void)
 
 static int init_boost_workqueues(void)
 {
-	input.boost_wq = alloc_ordered_workqueue("input_boost_wq", WQ_FREEZABLE);
+	input.boost_wq = alloc_ordered_workqueue("input_boost_wq", 0);
 	if (!input.boost_wq)
 		return -ENOMEM;
 
 	INIT_WORK(&input.enable, trigger_input);	
 	INIT_DELAYED_WORK(&input.disable, input_remove);
 
-	kick.boost_wq = alloc_ordered_workqueue("kick_boost_wq", WQ_FREEZABLE);
+	kick.boost_wq = alloc_ordered_workqueue("kick_boost_wq", 0);
 	if (!kick.boost_wq)
 		return -ENOMEM;
 
