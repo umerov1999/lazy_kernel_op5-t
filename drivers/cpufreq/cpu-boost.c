@@ -263,14 +263,14 @@ static void destroy_boost_workqueues(void)
 
 static int init_boost_workqueues(void)
 {
-	input.boost_wq = alloc_ordered_workqueue("input_boost_wq", 0);
+	input.boost_wq = alloc_workqueue("input_boost_wq", WQ_HIGHPRI, 1);
 	if (!input.boost_wq)
 		return -ENOMEM;
 
 	INIT_WORK(&input.enable, trigger_input);	
 	INIT_DELAYED_WORK(&input.disable, input_remove);
 
-	kick.boost_wq = alloc_ordered_workqueue("kick_boost_wq", 0);
+	kick.boost_wq = alloc_workqueue("kick_boost_wq", WQ_HIGHPRI, 1);
 	if (!kick.boost_wq)
 		return -ENOMEM;
 
