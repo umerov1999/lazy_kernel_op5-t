@@ -21,7 +21,6 @@
 #include <linux/time.h>
 #include <linux/cpu-boost.h>
 #include <linux/sched.h>
-#include <linux/sched/sysctl.h>
 
 /*
  * Modifiable Variables
@@ -62,6 +61,9 @@ struct boost_val {
 /* Boost value structures */
 static struct boost_val input, kick;
 
+/* Extra slot for registering a passive boost */
+static int passive_slot;
+
 /* Framebuffer state notifier and stored blank boolean */
 static struct notifier_block fb_notifier;
 static bool stored_blank;
@@ -77,18 +79,17 @@ static void set_boost(struct boost_val *boost, bool enable)
 
 	if (boost == &input) {
 		/*
-		 * Only allow boost and prefer_idle to function without bias in order to properly
-		 * assess the capacity of cpus and choose the proper idle cpu for the task.
+		 * Enable boost and prefer_idle with bias function in order to bias 
+		 * migrating top-app (also for foreground) tasks to idle big cluster cores.
 		 */
 		do_prefer_idle("top-app", enable);
 		do_prefer_idle("foreground", enable);
 	} else {
 		/*
-		 * Use idle cpus with high original capacity and bias to big cluster when it
-		 * comes to app launches and transitions in order to speed up the process
-		 * and efficiently consume power.
+		 * Use idle cpus with the highest original capacity for top-app when it
+		 * comes to app launches and transitions in order to speed up 
+		 * the process and efficiently consume power.
 		 */
-		sysctl_sched_cpu_schedtune_bias = enable;
 		do_crucial("top-app", enable);
 	}
 }
@@ -239,6 +240,11 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 
 	stored_blank = !suspend_state;
 	disable_schedtune_boost(suspend_state);
+
+	if (stored_blank)
+		do_stune_boost("top-app", 1, &passive_slot);
+	else
+		reset_stune_boost("top-app", passive_slot);
 
 	/* Trigger boosts whenever blank state changes */
 	trigger_event(&input, dsboost_input_state);
