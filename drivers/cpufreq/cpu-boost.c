@@ -61,9 +61,6 @@ struct boost_val {
 /* Boost value structures */
 static struct boost_val input, kick;
 
-/* Extra slot for registering a passive boost */
-static int passive_slot;
-
 /* Framebuffer state notifier and stored blank boolean */
 static struct notifier_block fb_notifier;
 static bool stored_blank;
@@ -240,11 +237,6 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 
 	stored_blank = !suspend_state;
 	disable_schedtune_boost(suspend_state);
-
-	if (stored_blank)
-		do_stune_boost("top-app", 1, &passive_slot);
-	else
-		reset_stune_boost("top-app", passive_slot);
 
 	/* Trigger boosts whenever blank state changes */
 	trigger_event(&input, dsboost_input_state);
