@@ -6,6 +6,7 @@
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 #include <linux/list.h>
+#include <linux/cpu-boost.h>
 
 #include <trace/events/sched.h>
 
@@ -772,6 +773,10 @@ static int boost_write_wrapper(struct cgroup_subsys_state *css,
 	if (task_is_booster(current))
 		return 0;
 
+	if ((cpuboost_state(1) || cpuboost_state(0)) && 
+		!strcmp(css->cgroup->kn->name, "top-app"))
+		return 0;
+
 	return boost_write(css, cft, boost);
 }
 
@@ -790,7 +795,25 @@ static int prefer_idle_write_wrapper(struct cgroup_subsys_state *css,
 	if (task_is_booster(current))
 		return 0;
 
+	if (cpuboost_state(1) && 
+		(!strcmp(css->cgroup->kn->name, "top-app") ||
+		!strcmp(css->cgroup->kn->name, "foreground")))
+		return 0;
+
 	return prefer_idle_write(css, cft, prefer_idle);
+}
+
+static int crucial_write_wrapper(struct cgroup_subsys_state *css,
+				     struct cftype *cft, u64 crucial)
+{
+	if (task_is_booster(current))
+		return 0;
+
+	if (cpuboost_state(0) && 
+		!strcmp(css->cgroup->kn->name, "top-app"))
+		return 0;
+
+	return crucial_write(css, cft, crucial);
 }
 #endif
 
@@ -850,7 +873,7 @@ static struct cftype files[] = {
 	{
 		.name = "crucial",
 		.read_u64 = crucial_read,
-		.write_u64 = crucial_write,
+		.write_u64 = crucial_write_wrapper,
 	},
 	{ }	/* terminate */
 };

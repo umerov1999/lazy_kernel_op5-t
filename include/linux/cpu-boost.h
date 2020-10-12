@@ -6,8 +6,13 @@
 #define _CPU_BOOST_H_
 
 #ifdef CONFIG_CPU_BOOST
+bool cpuboost_state(bool is_input);
 void cpuboost_kick(void);
 #else
+static inline bool cpuboost_state(bool is_input)
+{
+    return 0;
+}
 static inline void cpuboost_kick(void)
 {
 }

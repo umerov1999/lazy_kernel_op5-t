@@ -65,6 +65,12 @@ static struct boost_val input, kick;
 static struct notifier_block fb_notifier;
 static bool stored_blank;
 
+/* Function to check cpuboost state for other drivers */
+bool cpuboost_state(bool is_input)
+{
+	return is_input ? dsboost_input_state : dsboost_kick_state;
+}
+
 static void set_boost(struct boost_val *boost, bool enable)
 {
 	if (boost->curr_state == enable)
