@@ -242,7 +242,6 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 		return NOTIFY_OK;
 
 	stored_blank = !suspend_state;
-	disable_schedtune_boost(suspend_state);
 
 	/* Trigger boosts whenever blank state changes */
 	trigger_event(&input, dsboost_input_state);
