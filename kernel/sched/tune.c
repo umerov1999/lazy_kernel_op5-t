@@ -766,7 +766,6 @@ boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 	return 0;
 }
 
-#ifdef CONFIG_STUNE_ASSIST
 static int boost_write_wrapper(struct cgroup_subsys_state *css,
 			       struct cftype *cft, s64 boost)
 {
@@ -815,7 +814,6 @@ static int crucial_write_wrapper(struct cgroup_subsys_state *css,
 
 	return crucial_write(css, cft, crucial);
 }
-#endif
 
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 static void
