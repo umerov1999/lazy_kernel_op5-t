@@ -71,7 +71,7 @@ bool cpuboost_state(bool is_input)
 	return is_input ? dsboost_input_state : dsboost_kick_state;
 }
 
-static void set_boost(struct boost_val *boost, bool enable)
+static inline void set_boost(struct boost_val *boost, bool enable)
 {
 	if (boost->curr_state == enable)
 		return;
@@ -97,7 +97,7 @@ static void set_boost(struct boost_val *boost, bool enable)
 	}
 }
 
-static void trigger_boost(struct boost_val *boost, unsigned int *sched_boost,
+static inline void trigger_boost(struct boost_val *boost, unsigned int *sched_boost,
 		unsigned short *duration_ms)
 {
 	if (*duration_ms != boost->stored_duration_ms) {
@@ -150,7 +150,7 @@ static void kick_remove(struct work_struct *work)
 	set_boost(&kick, false);
 }
 
-static void trigger_event(struct boost_val *boost, bool state)
+static inline void trigger_event(struct boost_val *boost, bool state)
 {
 	/* Disable boost if state or stored_blank is false */
 	if (!state || !stored_blank) {
